@@ -6,6 +6,8 @@
  * Apr 24, 2020:    Breakout board variant details added by Mike Pfleger
  *                  <mike.pfleger@gmail.com>
  *
+ * July 2024:       Modifed for custom HAL support, John Greenwell
+ * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
@@ -25,13 +27,13 @@
  * THE SOFTWARE.
  */
 
-
 #ifndef PCD8544_H
 #define PCD8544_H
 
+#include "hal.h"
 
-#include <Arduino.h>
-
+namespace PeripheralIO
+{
 
 // Chip variants supported (ST7576 is experimental)...
 #define CHIP_PCD8544 0
@@ -61,12 +63,7 @@ class PCD8544: public Print {
          *  8           8           LED         no Ilim resistors on "Sparkfun"
          */
          
-        // All the pins can be changed from the default values...
-        PCD8544(uint8_t sclk  = 3,   /* clock       (display pin 2) */
-                uint8_t sdin  = 4,   /* data-in     (display pin 3) */
-                uint8_t dc    = 5,   /* data select (display pin 4) */
-                uint8_t reset = 6,   /* reset       (display pin 8) */
-                uint8_t sce   = 7);  /* enable      (display pin 5) */
+        PCD8544(HAL::SPI& spi, uint8_t dc, uint8_t reset, uint8_t sce);
 
         // Display initialization (dimensions in pixels)...
         void begin(uint8_t width=84, uint8_t height=48, uint8_t model=CHIP_PCD8544);
@@ -109,11 +106,10 @@ class PCD8544: public Print {
         void drawColumn(uint8_t lines, uint8_t value);
 
     private:
-        uint8_t pin_sclk;
-        uint8_t pin_sdin;
-        uint8_t pin_dc;
-        uint8_t pin_reset;
-        uint8_t pin_sce;
+        HAL::SPI& _spi;
+        HAL::GPIO pin_dc;
+        HAL::GPIO pin_reset;
+        HAL::GPIO pin_sce;
 
         // Chip variant in use...
         uint8_t model;
@@ -136,8 +132,11 @@ class PCD8544: public Print {
         void send(uint8_t type, uint8_t data);
 };
 
+}
 
 #endif  /* PCD8544_H */
 
 
 /* vim: set expandtab ts=4 sw=4: */
+
+// EOF

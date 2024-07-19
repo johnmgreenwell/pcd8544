@@ -1,0 +1,21 @@
+{
+    "name": "ili9340",
+    "version": "1.0.0",
+    "description": "Portable, multi-instance driver for ILI9340 TFT LCDs",
+    "keywords": "embedded, driver, hal, tft, lcd",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/johnmgreenwell/ili9340"
+    },
+    "license": "MIT",
+    "frameworks": "*",
+    "platforms": "*",
+	"dependencies": {
+        "Adafruit GFX Library": "https://github.com/adafruit/Adafruit-GFX-Library.git"
+    },
+    "build": {
+        "flags": [
+        "-I../../include"
+        ]
+    }
+}

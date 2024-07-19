@@ -3,6 +3,8 @@
  *
  * Copyright (c) 2010 Carlos Rodrigues <cefrodrigues@gmail.com>
  *
+ * Modifed for custom HAL support, John Greenwell 2024
+ * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
@@ -23,20 +25,13 @@
  */
 
 
-#include "PCD8544.h"
+#include "pcd8544.h"
 
-#include <Arduino.h>
+namespace PeripheralIO
+{
 
-#if defined (__XTENSA__)
-#include <pgmspace.h>
-#else
-#include <avr/pgmspace.h>
-#endif
-
-
-#define PCD8544_CMD  LOW
-#define PCD8544_DATA HIGH
-
+#define PCD8544_CMD  false
+#define PCD8544_DATA true
 
 /*
  * If this was a ".h", it would get added to sketches when using
@@ -45,13 +40,12 @@
 #include "charset.cpp"
 
 
-PCD8544::PCD8544(uint8_t sclk, uint8_t sdin, uint8_t dc, uint8_t reset, uint8_t sce):
-    pin_sclk(sclk),
-    pin_sdin(sdin),
-    pin_dc(dc),
-    pin_reset(reset),
-    pin_sce(sce)
-{}
+PCD8544::PCD8544(HAL::SPI& spi, uint8_t dc, uint8_t reset, uint8_t sce)
+: _spi(spi)
+, pin_dc(dc)
+, pin_reset(reset)
+, pin_sce(sce)
+{ }
 
 
 void PCD8544::begin(uint8_t width, uint8_t height, uint8_t model)
@@ -69,18 +63,16 @@ void PCD8544::begin(uint8_t width, uint8_t height, uint8_t model)
     memset(this->custom, 0, sizeof(this->custom));
 
     // All pins are outputs (these displays cannot be read)...
-    pinMode(this->pin_sclk, OUTPUT);
-    pinMode(this->pin_sdin, OUTPUT);
-    pinMode(this->pin_dc, OUTPUT);
-    pinMode(this->pin_reset, OUTPUT);
-    pinMode(this->pin_sce, OUTPUT);
+    pin_dc.pinMode(GPIO_OUTPUT);
+    pin_reset.pinMode(GPIO_OUTPUT);
+    pin_sce.pinMode(GPIO_OUTPUT);
 
     // Reset the controller state...
-    digitalWrite(this->pin_reset, HIGH);
-    digitalWrite(this->pin_sce, HIGH);
-    digitalWrite(this->pin_reset, LOW);
-    delay(100);
-    digitalWrite(this->pin_reset, HIGH);
+    pin_reset.digitalWrite(true);
+    pin_sce.digitalWrite(true);
+    pin_reset.digitalWrite(false);
+    HAL::delay_ms(100);
+    pin_reset.digitalWrite(true);
 
     // Set the LCD parameters...
     this->send(PCD8544_CMD, 0x21);  // extended instruction set control (H=1)
@@ -102,7 +94,7 @@ void PCD8544::begin(uint8_t width, uint8_t height, uint8_t model)
     // Activate LCD...
     this->send(PCD8544_CMD, 0x08);  // display blank
     this->send(PCD8544_CMD, 0x0c);  // normal mode (0x0d = inverse mode)
-    delay(100);
+    HAL::delay_ms(100);
 
     // Place the cursor at the origin...
     this->send(PCD8544_CMD, 0x80);
@@ -324,12 +316,15 @@ void PCD8544::drawColumn(uint8_t lines, uint8_t value)
 
 void PCD8544::send(uint8_t type, uint8_t data)
 {
-    digitalWrite(this->pin_dc, type);
+    pin_dc.digitalWrite(type);
 
-    digitalWrite(this->pin_sce, LOW);
-    shiftOut(this->pin_sdin, this->pin_sclk, MSBFIRST, data);
-    digitalWrite(this->pin_sce, HIGH);
+    pin_sce.digitalWrite(false);
+    _spi.transfer(data);
+    pin_sce.digitalWrite(true);
 }
 
+}
 
 /* vim: set expandtab ts=4 sw=4: */
+
+// EOF
